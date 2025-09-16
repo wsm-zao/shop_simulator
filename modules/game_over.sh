@@ -90,6 +90,8 @@ show_results() {
         echo "������ 失败原因分析："
         if [ $consecutive_loss_days -ge 3 ]; then
             echo "   - 连续3天亏损（需关注市场价波动，避免亏本销售）"
+        elif [ $day -ge 20 ]; then
+	    echo "   - 20天内未达成任何成就"
         else
             echo "   - 很遗憾您未解锁成就称号，请下次努力"
         fi
