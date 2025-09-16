@@ -3,7 +3,6 @@
 run_business() {
     # 第一步：显示当前状态，生成今日市场价
     show_status
-    generate_market_prices  # 新增：生成每日市场价
     echo "今日营业"
     echo "---------------------------------------------"
 
@@ -70,21 +69,20 @@ run_business() {
     esac
     [ $event_occurred -eq 1 ] && echo "---------------------------------------------"
 
-    # 第三步：销售计算（核心修改：关联市场价调整销量）
+    # 第三步：销售计算（核心修改：控制亏损商品不参与销售）
     for i in "${!inventory[@]}"; do
         item=(${inventory[$i]})
         item_name=${item[0]}
-        item_count=${item[1]}  # 库存数量
-        item_cost=${item[2]}   # 成本价（分）
-        item_price=${item[3]}  # 玩家售价（分）
+        item_count=${item[1]}
+        item_cost=${item[2]}
+        item_price=${item[3]}
 
-        # 无库存则跳过
         if [ $item_count -eq 0 ]; then
             echo "❌ ${item_name}：库存为0，无法销售"
             continue
         fi
 
-        # 1. 获取该商品今日市场价
+        # 1. 获取今日市场价
         local market_price=0
         for mp in "${daily_market_prices[@]}"; do
             local mp_name=${mp% *}
@@ -95,35 +93,40 @@ run_business() {
             fi
         done
 
-        # 2. 按“玩家售价 vs 市场价”调整销量比例
-        local price_ratio=100  # 销量比例（100=1倍）
+        # 2. 亏损判断：市场价 < 成本价 且 售价 ≤ 市场价时，不销售
+        if [ $market_price -lt $item_cost ] && [ $item_price -le $market_price ]; then
+            echo "������ ${item_name}：处于亏损区间（售价≤市场价<成本价），今日暂停销售"
+            continue  # 跳过销售流程
+        fi
+
+        # 3. 正常销售的价格比例计算（原有逻辑保留）
+        local price_ratio=100
         if [ $item_price -gt $market_price ]; then
             price_ratio=50  # 售价＞市场价：销量×0.5
-            echo -n "������ ${item_name}（售价高于市场价）："
+            echo -n "������ ${item_name}（售价高于市场价）："
         elif [ $item_price -eq $market_price ]; then
             price_ratio=100  # 售价=市场价：销量×1
             echo -n "✅ ${item_name}（售价等于市场价）："
         else
             price_ratio=150  # 售价＜市场价：销量×1.5
-            echo -n "������ ${item_name}（售价低于市场价）："
+            echo -n "������ ${item_name}（售价低于市场价）："
         fi
-
-        # 3. 计算最终销量（基础需求×事件乘数×价格比例×随机波动）
-        local base_demand=$(( (10000 / item_price) / 20 + 1 ))  # 基础需求（价格越低需求越高）
+        # 4. 计算最终销量（基础需求×事件乘数×价格比例×随机波动）
+        local base_demand=$(( (18000 / item_price) / 10 + 3 ))  # 基础需求（价格越低需求越高）
         local adjusted_demand=$(( (base_demand * event_multiplier * price_ratio) / 10000 ))  # 综合调整
         [ $adjusted_demand -eq 0 ] && adjusted_demand=1  # 至少1个需求
         local random_factor=$(( RANDOM % 3 + 1 ))  # 1~3倍随机波动
         local possible_sales=$(( adjusted_demand * random_factor ))
 
-        # 4. 实际销量不超过库存
+        # 5. 实际销量不超过库存
         local sales=$(( possible_sales > item_count ? item_count : possible_sales ))
 
-        # 5. 计算单商品税前利润
+        # 6. 计算单商品税前利润
         local item_revenue=$(( sales * item_price ))  # 收入
         local item_profit=$(( item_revenue - (sales * item_cost) ))  # 利润
         [ $random_event -eq 4 ] && item_profit=$(( item_profit * 80 / 100 ))  # 特价促销扣20%利润
 
-        # 6. 累计数据，更新库存
+        # 7. 累计数据，更新库存
         daily_sales=$(( daily_sales + item_revenue ))
         total_profit=$(( total_profit + item_profit ))
         local new_count=$(( item_count - sales ))

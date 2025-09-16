@@ -47,6 +47,7 @@ main() {
     while [ $game_over -eq 0 ]; do
         # 显示当日状态（资金、库存、天数）
         show_status
+        generate_market_prices  # 新增：生成每日市场价
 
         # 提示操作选项
         echo "请选择操作:"
