@@ -7,13 +7,11 @@ check_unlock_products() {
     # 遍历可解锁商品，检查资金条件
     for up in "${unlockable_products[@]}"; do
         # 拆分可解锁商品信息：名 解锁资金 成本 售价
-        local up_name=${up%% *}
-        local up_money=${up% * * *}
-        up_money=${up_money#* }
-        local up_cost=${up% * *}
-        up_cost=${up_cost#* * }
-        local up_price=${up#* * * }
-
+	local parts=($up)  # 将商品信息按空格拆分为数组
+	local up_name=${parts[0]}      # 商品名（第1个元素）
+	local up_money=${parts[1]}     # 解锁资金（第2个元素，纯数字）
+	local up_cost=${parts[2]}      # 成本（第3个元素）
+	local up_price=${parts[3]}     # 售价（第4个元素）
         # 解锁条件：资金达标 + 未解锁过
         if [ $money -ge $up_money ] && ! [[ " ${unlocked_products[@]} " =~ " ${up_name} " ]]; then
             new_unlocked+=("$up_name $up_cost $up_price")

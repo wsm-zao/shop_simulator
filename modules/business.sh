@@ -160,7 +160,7 @@ run_business() {
     # 第五步：计算税后利润，更新资金
     after_tax_profit=$(( total_profit - tax - daily_expense ))  # 税后利润=税前-税款-房租
     money=$(( money + daily_sales - tax - daily_expense ))  # 资金=原有+销售额-税款-房租
-
+    #check_unlock_products
     # 恢复房租（若有意外账单）
     [ $random_event -eq 7 ] && daily_expense=1000
 
