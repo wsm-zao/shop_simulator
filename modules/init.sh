@@ -1,6 +1,13 @@
 #!/bin/bash
 # 模块：游戏初始化
 initialize_game() {
+    # 0. 初始化历史记录文件（若不存在则创建）
+    local history_file="$(dirname "$0")/history.csv"  # 定位到根目录
+    if [ ! -f "$history_file" ]; then
+        # 创建文件并写入表头
+        echo "日期,经营天数,最终资金,总营收,成就,解锁商品数量,已解锁商品" > "$history_file"
+        echo "������ 已初始化历史记录文件"
+    fi
     # 1. 基础资金与开销
     money=10000          # 初始资金：100元（10000分）
     day=1                # 从第1天开始

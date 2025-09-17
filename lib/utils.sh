@@ -39,56 +39,35 @@ validate_price() {
         return 1  # 格式无效
     fi
 }
-# 4. 批量处理公共函数
-get_batch_item_nums() {
-    read -p "请输入商品编号（多个用空格分隔，0取消）: " -a input_nums
-    
-    # 检查是否包含0（取消操作）
-    if [[ " ${input_nums[@]} " =~ " 0 " ]]; then
-        return 1  # 取消
-    fi
-    
-    # 检查输入是否为空
-    if [ ${#input_nums[@]} -eq 0 ]; then
-        return 2  # 无输入
-    fi
-    
-    # 输出有效编号数组（供调用者处理）
-    echo "${input_nums[@]}"
-    return 0
-}
-# 5. 验证批量函数
-validate_batch_items() {
-    local input_nums=($1)
-    local valid_items=()
-    local has_invalid=0
-    
-    for num in "${input_nums[@]}"; do
-        # 验证是否为正整数
-        if ! is_positive_int "$num"; then
-            echo "⚠️ 无效编号：$num（必须是正整数）" >&2  # 错误信息输出到stderr
-            has_invalid=1
-            continue
+# 4. 保存历史记录（限制最多20条）
+save_history() {
+    local history_file="$(dirname "$0")/history.csv"  # 历史文件路径
+    local date=$(date "+%Y-%m-%d %H:%M")  # 记录日期时间
+    local days=$day                       # 经营天数
+    local final_money=$(to_yuan $money)   # 最终资金
+    local revenue=$(to_yuan $((money - 10000)))  # 总营收
+    local ach=$([ -z "$achievement" ] && echo "未达成" || echo "$achievement")  # 成就
+    local unlock_count=${#unlocked_products[@]}  # 解锁商品数
+    local unlock_list=${unlocked_products[*]:-无}  # 解锁商品列表
+
+    # 步骤1：检查当前记录数量（排除表头）
+    if [ -f "$history_file" ]; then
+        # 获取数据行数（总行数-1行表头）
+        local line_count=$(wc -l < "$history_file")
+        local data_count=$((line_count - 1))  # 实际记录数
+
+        # 步骤2：若记录数≥20，保留最近19条（删除最早的1条）
+        if [ $data_count -ge 20 ]; then
+            # 创建临时文件存储表头+最近19条记录
+            local temp_file=$(mktemp)
+            # 保留表头（第1行）和最后19条数据
+            head -n 1 "$history_file" > "$temp_file"  # 表头
+            tail -n 19 "$history_file" >> "$temp_file"  # 最近19条记录
+            # 用临时文件替换原文件（保持权限）
+            mv "$temp_file" "$history_file"
         fi
-        
-        # 验证编号范围
-        local idx=$((num - 1))
-        if [ $idx -lt 0 ] || [ $idx -ge ${#inventory[@]} ]; then
-            echo "⚠️ 编号不存在：$num（超出范围）" >&2
-            has_invalid=1
-            continue
-        fi
-        
-        # 提取商品信息（名称 数量 成本 售价）
-        local item=(${inventory[$idx]})
-        valid_items+=("$idx ${item[0]} ${item[2]} ${item[3]}")  # 索引 名称 成本 售价（分）
-    done
-    
-    # 输出有效商品信息（供调用者解析）
-    if [ ${#valid_items[@]} -gt 0 ]; then
-        printf "%s\n" "${valid_items[@]}"
-        return 0
-    else
-        return 1  # 无有效商品
     fi
+
+    # 步骤3：追加新记录
+    echo "${date},${days},${final_money},${revenue},${ach},${unlock_count},${unlock_list}" >> "$history_file"
 }
