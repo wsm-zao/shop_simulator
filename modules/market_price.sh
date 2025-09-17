@@ -25,26 +25,25 @@ generate_market_prices() {
         echo -n "成本=$(to_yuan $item_cost)元 | "
         echo -n "市场价=$(to_yuan $market_price)元 | "
         echo -n "当前售价=$(to_yuan $item_price)元 "
-
         if [ $market_price -lt $item_cost ]; then
-            # 市场价 < 成本价时的策略提示
-            if [ $item_price -gt $market_price ]; then
-                # 售价 > 市场价：适合进货（有利润空间）
-                echo -e "✅ [策略机会] 当前市场价低于成本，进货可盈利"
-            else
-                # 售价 ≤ 市场价：销售会亏损
-                echo -e "⚠️ [风险提示] 当前售价低于市场价，销售将亏损"
-            fi
+          # 市场价 < 成本价时的策略提示（基于售价与成本价的核心关系）
+          if [ $item_price -gt $item_cost ]; then
+              # 售价 > 成本价：即使市场价低，销售仍有利润空间
+              echo -e "✅ [策略机会] 售价高于成本价，可正常销售盈利"
+          else
+              # 售价 ≤ 成本价：无论市场价如何，销售都会亏损
+              echo -e "⚠️ [风险提示] 售价低于/等于成本价，销售将亏损"
+          fi
         else
-            # 市场价 ≥ 成本价时的常规提示
-            if [ $item_price -gt $market_price ]; then
-                echo -e "������ 售价高于市场价，销量可能下降"
-            elif [ $item_price -eq $market_price ]; then
-                echo -e "������ 售价等于市场价，销量正常"
-            else
-                echo -e "������ 售价低于市场价，销量可能上升"
-            fi
-        fi
+           # 市场价 ≥ 成本价时的常规提示（保持不变）
+           if [ $item_price -gt $market_price ]; then
+               echo -e "������ 售价高于市场价，销量可能下降"
+           elif [ $item_price -eq $market_price ]; then
+               echo -e "������ 售价等于市场价，销量正常"
+           else
+               echo -e "������ 售价低于市场价，销量可能上升"
+           fi
+        fi 
     done
 
     echo "---------------------------------------------"

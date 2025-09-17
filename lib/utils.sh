@@ -39,3 +39,56 @@ validate_price() {
         return 1  # 格式无效
     fi
 }
+# 4. 批量处理公共函数
+get_batch_item_nums() {
+    read -p "请输入商品编号（多个用空格分隔，0取消）: " -a input_nums
+    
+    # 检查是否包含0（取消操作）
+    if [[ " ${input_nums[@]} " =~ " 0 " ]]; then
+        return 1  # 取消
+    fi
+    
+    # 检查输入是否为空
+    if [ ${#input_nums[@]} -eq 0 ]; then
+        return 2  # 无输入
+    fi
+    
+    # 输出有效编号数组（供调用者处理）
+    echo "${input_nums[@]}"
+    return 0
+}
+# 5. 验证批量函数
+validate_batch_items() {
+    local input_nums=($1)
+    local valid_items=()
+    local has_invalid=0
+    
+    for num in "${input_nums[@]}"; do
+        # 验证是否为正整数
+        if ! is_positive_int "$num"; then
+            echo "⚠️ 无效编号：$num（必须是正整数）" >&2  # 错误信息输出到stderr
+            has_invalid=1
+            continue
+        fi
+        
+        # 验证编号范围
+        local idx=$((num - 1))
+        if [ $idx -lt 0 ] || [ $idx -ge ${#inventory[@]} ]; then
+            echo "⚠️ 编号不存在：$num（超出范围）" >&2
+            has_invalid=1
+            continue
+        fi
+        
+        # 提取商品信息（名称 数量 成本 售价）
+        local item=(${inventory[$idx]})
+        valid_items+=("$idx ${item[0]} ${item[2]} ${item[3]}")  # 索引 名称 成本 售价（分）
+    done
+    
+    # 输出有效商品信息（供调用者解析）
+    if [ ${#valid_items[@]} -gt 0 ]; then
+        printf "%s\n" "${valid_items[@]}"
+        return 0
+    else
+        return 1  # 无有效商品
+    fi
+}
